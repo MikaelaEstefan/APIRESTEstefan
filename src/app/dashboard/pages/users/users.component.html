@@ -1,0 +1,13 @@
+<h1 [fontWeight]="'bolder'" appHeadline>Usuarios</h1>
+
+<button (click)="addUser()" mat-flat-button color="primary">
+  <mat-icon>add</mat-icon>
+  Crear usuario
+</button>
+
+
+<app-users-table
+  [dataSource]="(users$ | async) || []"
+  (editUser)="onEditUser($event)"
+  (deleteUser)="onDeleteUser($event)"
+></app-users-table>

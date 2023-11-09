@@ -1,0 +1,39 @@
+<div style="background-color: aquamarine">
+  <p>
+    {{ fullName$ | async }}
+    <br />
+    {{ email$ | async }}
+  </p>
+</div>
+
+<mat-nav-list>
+  <mat-list-item routerLink="home">
+    <a>Home</a>
+  </mat-list-item>
+
+  <mat-list-item
+    routerLink="users"
+    routerLinkActive
+    #usuariosLink="routerLinkActive"
+    [activated]="usuariosLink.isActive"
+  >
+    <a>Usuarios</a>
+  </mat-list-item>
+  <mat-list-item
+    routerLink="courses"
+    routerLinkActive
+    #cursosLink="routerLinkActive"
+    [activated]="cursosLink.isActive"
+  >
+    <a>Cursos</a>
+  </mat-list-item>
+  <mat-list-item>
+    <a>Alumnos</a>
+  </mat-list-item>
+  <mat-list-item>
+    <a>Inscripciones</a>
+  </mat-list-item>
+  <mat-list-item (click)="logout()">
+    <a>Cerrar sesión</a>
+  </mat-list-item>
+</mat-nav-list>
