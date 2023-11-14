@@ -1,67 +1,85 @@
-import { Component } from '@angular/core';
+import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { UsersComponent } from './users.component';
 import { MatDialog } from '@angular/material/dialog';
-import { UsersDialogComponent } from './components/users-dialog/users-dialog.component';
-import { User } from './models';
+import { of } from 'rxjs';
 import { UsersService } from './users.service';
-import { UsersBetterService } from './users-better.service';
-import { Observable } from 'rxjs';
 
-@Component({
-  selector: 'app-users',
-  templateUrl: './users.component.html',
-  styleUrls: ['./users.component.scss'],
-})
-export class UsersComponent {
-  userName = '';
-
-  users$: Observable<User[]>;
-
-  constructor(
-    private matDialog: MatDialog,
-    private usersService: UsersService // MockUsersService // private usersBetterService: UsersBetterService
-  ) {
-    this.users$ = this.usersService.getUsers();
-  }
-
-  addUser(): void {
-    this.matDialog
-      .open(UsersDialogComponent)
-      .afterClosed()
-      .subscribe({
-        next: (v) => {
-          if (!!v) {
-            this.users$ = this.usersService.createUser(v);
-          }
-        },
-      });
-  }
-
-  onEditUser(user: User): void {
-    this.matDialog
-      .open(UsersDialogComponent, {
-        data: user,
-      })
-      .afterClosed()
-      .subscribe({
-        next: (v) => {
-          if (!!v) {
-            this.users$ = this.usersService.updateUser(user.id, v);
-            // CREANDO UNA COPIA DEL ARRAY ACTUAL
-            // const arrayNuevo = [...this.users];
-            // const indiceToEdit = arrayNuevo.findIndex((u) => u.id === user.id);
-            // arrayNuevo[indiceToEdit] = { ...arrayNuevo[indiceToEdit], ...v };
-            // this.users = [...arrayNuevo];
-            // this.users = this.users.map((u) =>
-            //   u.id === user.id ? { ...u, ...v } : u
-            // );
-          }
-        },
-      });
-  }
-
-  onDeleteUser(userId: number): void {
-    if (confirm('Esta seguro?')) {
-      // this.users = this.users.filter((u) => u.id !== userId);
-    }
+// Mock MatDialog
+class MatDialogMock {
+  open() {
+    return { afterClosed: () => of(null) }; 
   }
 }
+
+// Mock UsersService
+class UsersServiceMock {
+  getUsers() {
+    return of([]);
+  }
+
+  createUser(user: any) {
+    return of([]);
+  }
+
+  updateUser(userId: any, user: any) {
+    return of([]);
+  }
+}
+
+describe('UsersComponent', () => {
+  let component: UsersComponent;
+  let fixture: ComponentFixture<UsersComponent>;
+
+  beforeEach(waitForAsync(() => {
+    TestBed.configureTestingModule({
+      declarations: [UsersComponent],
+      providers: [
+        { provide: MatDialog, useClass: MatDialogMock },
+        { provide: UsersService, useClass: UsersServiceMock },
+      ],
+    }).compileComponents();
+  }));
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(UsersComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should call addUser and update users$', () => {
+    spyOn(component.matDialog, 'open').and.returnValue({ afterClosed: () => of({}) });
+    spyOn(component.usersService, 'createUser').and.returnValue(of([{ id: 1, name: 'New User' }]));
+
+    component.addUser();
+
+    expect(component.matDialog.open).toHaveBeenCalled();
+    expect(component.usersService.createUser).toHaveBeenCalled();
+    expect(component.users$).toBeDefined(); 
+  });
+
+  it('should call onEditUser and update users$', () => {
+    const user = { id: 1, name: 'Existing User' };
+    spyOn(component.matDialog, 'open').and.returnValue({ afterClosed: () => of({}) });
+    spyOn(component.usersService, 'updateUser').and.returnValue(of([{ id: 1, name: 'Updated User' }]));
+
+    component.onEditUser(user);
+
+    expect(component.matDialog.open).toHaveBeenCalled();
+    expect(component.usersService.updateUser).toHaveBeenCalledWith(user.id, {});
+    expect(component.users$).toBeDefined(); 
+  });
+
+  it('should call onDeleteUser', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.onDeleteUser(1);
+
+    
+  });
+});
+
+export { UsersComponent };
+
