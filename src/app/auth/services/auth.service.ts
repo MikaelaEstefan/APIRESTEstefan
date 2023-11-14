@@ -1,66 +1,130 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, of } from 'rxjs';
-import { User } from 'src/app/dashboard/pages/users/models';
-
-import { environment } from 'src/environments/environment.local';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { RouterTestingModule } from '@angular/router/testing';
+import { AuthService } from './auth.service';
 import { LoginPayload } from '../models';
-import { Router } from '@angular/router';
+import { environment } from 'src/environments/environment.local';
+import { of } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root',
-})
-export class AuthService {
-  private _authUser$ = new BehaviorSubject<User | null>(null);
+describe('AuthService', () => {
+  let authService: AuthService;
+  let httpTestingController: HttpTestingController;
 
-  public authUser$ = this._authUser$.asObservable();
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule, RouterTestingModule],
+      providers: [AuthService],
+    });
 
-  constructor(private httpClient: HttpClient, private router: Router) {}
+    authService = TestBed.inject(AuthService);
+    httpTestingController = TestBed.inject(HttpTestingController);
+  });
 
-  login(payload: LoginPayload): void {
-    this.httpClient
-      .get<User[]>(
-        `${environment.baseUrl}/users?email=${payload.email}&password=${payload.password}`
-      )
-      .subscribe({
-        next: (response) => {
-          if (!response.length) {
-            alert('Usuario o contrasena invalidos');
-          } else {
-            const authUser = response[0];
-            this._authUser$.next(authUser);
-            localStorage.setItem('token', authUser.token);
-            this.router.navigate(['/dashboard/home']);
-          }
-        },
-        error: (err) => {
-          alert('Error de conexion');
-        },
-      });
-  }
+  afterEach(() => {
+    httpTestingController.verify();
+  });
 
-  verifyToken(): Observable<boolean> {
-    return this.httpClient
-      .get<User[]>(
-        `${environment.baseUrl}/users?token=${localStorage.getItem('token')}`
-      )
-      .pipe(
-        map((users) => {
-          if (!users.length) {
-            return false;
-          } else {
-            const authUser = users[0];
-            this._authUser$.next(authUser);
-            localStorage.setItem('token', authUser.token);
-            return true;
-          }
-        })
-      );
-  }
+  it('should be created', () => {
+    expect(authService).toBeTruthy();
+  });
 
-  logout(): void {
-    this._authUser$.next(null);
-    localStorage.removeItem('token');
-    this.router.navigate(['/auth/login']);
-  }
-}
+  it('should login successfully', fakeAsync(() => {
+    const loginPayload: LoginPayload = { email: 'test@example.com', password: 'password' };
+    const mockUser = { /* your mock user data here */ };
+
+    authService.login(loginPayload);
+
+    const req = httpTestingController.expectOne(
+      `${environment.baseUrl}/users?email=${loginPayload.email}&password=${loginPayload.password}`
+    );
+
+    req.flush([mockUser]);
+
+    tick();
+
+    expect(authService.authUser$).toBeTruthy();
+    authService.authUser$.subscribe((user: any) => {
+      expect(user).toEqual(mockUser); 
+    });
+  }));
+
+  it('should handle login error', fakeAsync(() => {
+    const loginPayload: LoginPayload = { email: 'invalid@example.com', password: 'wrongpassword' };
+
+    authService.login(loginPayload);
+
+    const req = httpTestingController.expectOne(
+      `${environment.baseUrl}/users?email=${loginPayload.email}&password=${loginPayload.password}`
+    );
+
+    req.error(new ErrorEvent('Fake error'));
+
+    tick();
+
+   
+  }));
+
+  it('should verify token successfully', fakeAsync(() => {
+    const mockUser = {  };
+    localStorage.setItem('token', mockUser.token);
+
+    authService.verifyToken();
+
+    const req = httpTestingController.expectOne(
+      `${environment.baseUrl}/users?token=${localStorage.getItem('token')}`
+    );
+
+    req.flush([mockUser]);
+
+    tick();
+
+    authService.authUser$.subscribe((user: any) => {
+      expect(user).toEqual(mockUser);
+    });
+  }));
+
+  it('should handle verifyToken error', fakeAsync(() => {
+    localStorage.setItem('token', 'invalid-token');
+
+    authService.verifyToken();
+
+    const req = httpTestingController.expectOne(
+      `${environment.baseUrl}/users?token=${localStorage.getItem('token')}`
+    );
+
+    req.error(new ErrorEvent('Fake error'));
+
+    tick();
+
+    
+  }));
+
+  it('should logout successfully', fakeAsync(() => {
+    const mockUser = { };
+    authService.authUser$ = of(mockUser);
+
+    authService.logout();
+
+    authService.authUser$.subscribe((user: any) => {
+      expect(user).toBeNull();
+    });
+
+    expect(localStorage.getItem('token')).toBeNull();
+  }));
+
+  it('should handle logout error', fakeAsync(() => {
+    const mockUser = {  };
+    authService.authUser$ = of(mockUser);
+
+    authService.logout();
+
+    authService.authUser$.subscribe((user: any) => {
+      expect(user).toBeNull();
+    });
+
+    expect(localStorage.getItem('token')).toBeNull();
+   
+  }));
+});
+export { AuthService };
+
